@@ -32,8 +32,26 @@ function setCursorNthCharInLine(line, n) {
     }
 }
 
-function updateBottomBar(cursorPos, fileLen) {
-    document.querySelector(`.cursor-info`).innerHTML = `${cursorPos.y + 1},${cursorPos.x + 1} All`
+function updateBottomBar(cursorPos, bufferElement) {
+    let scrollIndicator;
+    if(bufferElement.scrollHeight <= bufferElement.clientHeight)
+        scrollIndicator = 'All';
+    else if(bufferElement.scrollTop === 0)
+        scrollIndicator = 'Top';
+    else if(Math.ceil(bufferElement.clientHeight + bufferElement.scrollTop) >= bufferElement.scrollHeight)
+        scrollIndicator = 'Bot';
+    else
+        scrollIndicator = Math.round((bufferElement.scrollTop + bufferElement.clientHeight) / bufferElement.scrollHeight * 100) + '%';
+
+    document.querySelector(`.cursor-info`).innerHTML = `${cursorPos.y + 1},${cursorPos.x + 1} ${scrollIndicator}`
+}
+
+function scrollIntoViewIfNotVisible(e) {
+    const styles = getComputedStyle(e);
+    const bottomBound = window.innerHeight - (Number(styles.scrollMarginBottom.slice(0, -2)) || 0)
+    const topBound = Number(styles.scrollMarginTop.slice(0, -2)) || 0
+    if (e.getBoundingClientRect().bottom > bottomBound) e.scrollIntoView(false);
+    if (e.getBoundingClientRect().top < topBound) e.scrollIntoView();
 }
 
 function main() {
@@ -64,8 +82,11 @@ function main() {
                 setCursor(lines, cursorPos);
                 break;
         }
-        updateBottomBar(cursorPos, lines.length);
+        
+        scrollIntoViewIfNotVisible(lines[cursorPos.y]);
+        updateBottomBar(cursorPos, this.document.querySelector(`section:has(#cursor)`));
     });
+    //todo move cursor when scrolling
 }
 
 document.addEventListener("DOMContentLoaded", main);

@@ -11,8 +11,6 @@ body {
     height: 100vh;
     width: 100vw;
     padding: var(--gap);
-    display: flex;
-    flex-direction: column;
     font-family: monospace;
 }
 
@@ -20,8 +18,8 @@ body {
 main {
     display: flex;
     gap: var(--gap);
-    flex: 1 1 auto;
     overflow: auto;
+    height: round(down, calc(100% - 1em), 1em);
 }
 
 section {
@@ -30,7 +28,6 @@ section {
     scrollbar-width: none;
     flex: 1 1 0px;
     counter-reset: linenr;
-    scroll-snap-type: y mandatory;
 }
 
 section > * {
@@ -38,8 +35,8 @@ section > * {
     counter-increment: linenr;
     margin-left: 2.5em;
     position: relative;
-    scroll-snap-align: top;
-    scroll-snap-stop: always;
+    scroll-margin-top: 3em;
+    scroll-margin-bottom: 3em;
 }
 
 section > * *{
