@@ -1,0 +1,74 @@
+:root {
+    --gap: 1em;
+    --color-background: #0c0c0c;
+    --color-text: white;
+}
+
+body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    box-sizing: border-box;
+    height: 100vh;
+    width: 100vw;
+    padding: var(--gap);
+    display: flex;
+    flex-direction: column;
+    font-family: monospace;
+}
+
+/* MAIN EDITOR */
+main {
+    display: flex;
+    gap: var(--gap);
+    flex: 1 1 auto;
+    overflow: auto;
+}
+
+section {
+    max-height: 100%;
+    overflow: auto;
+    scrollbar-width: none;
+    flex: 1 1 0px;
+    counter-reset: linenr;
+    scroll-snap-type: y mandatory;
+}
+
+section > * {
+    display: block;
+    counter-increment: linenr;
+    margin-left: 2.5em;
+    position: relative;
+    scroll-snap-align: top;
+    scroll-snap-stop: always;
+}
+
+section > * *{
+    display: inline;
+}
+
+section > *::before {
+    position: absolute;
+    text-align: right;
+    content: counter(linenr);
+    right: 100%;
+    margin-right: .5em;
+    width: 2em;
+}
+
+section > .selected {
+    background-color: red;
+}
+
+#cursor {
+    background-color: white;
+    color: black;
+}
+
+/* FOOTER */
+footer {
+    width: 100%;
+    background-color: white;
+    color: black;
+    display: flex;
+    justify-content: space-between;
+}
