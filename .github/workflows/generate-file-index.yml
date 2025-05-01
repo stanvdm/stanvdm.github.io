@@ -18,9 +18,7 @@ jobs:
           files=($(find f -type f -not -name "index.json" | sort))
 
           for i in ${!files[@]}; do
-            echo $i
-            echo "${file[$i]}"
-            path=$(echo "${file[$i]}" | sed 's|^f/||')
+            path=$(echo "${files[$i]}" | sed 's|^f/||')
             size=$(stat -c %s "${files[$i]}")
             birth=$(stat -c %y "${files[$i]}" | cut -d '.' -f 1)
             modify=$(stat -c %w "${files[$i]}" | cut -d '.' -f 1)
