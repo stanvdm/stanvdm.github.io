@@ -7,8 +7,10 @@ on:
       - '.github/workflows/generate-file-index.yml'
 
 jobs:
-  build:
+  generate-file-index:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
       - name: Generate file index
