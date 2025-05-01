@@ -30,15 +30,12 @@ jobs:
             fi
 
             echo "Adding $path"
-            read -r -d '' file_json <<- EOF
-              {
-                "file": "${path}",
-                "size": ${size},
-                "birth": "${birth}",
-                "modify": "${modify}"
-              }
-          EOF
-            echo "$file_json" >> f/index.json
+            echo "  {" >> f/index.json
+            echo "    \"file\": \"${path}\"," >> f/index.json
+            echo "    \"size\": ${size}," >> f/index.json
+            echo "    \"birth\": \"${birth}\"," >> f/index.json
+            echo "    \"modify\": \"${modify}\"" >> f/index.json
+            echo "  }" >> f/index.json
             echo "Successfully added $path"
           done
 
