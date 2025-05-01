@@ -17,6 +17,7 @@ jobs:
           echo "[" > f/index.json
 
           files=($(find f -type f -not -name "index.json" | sort))
+          echo "${#files[@]} files found"
 
           for i in ${!files[@]}; do
             path=$(echo "${files[$i]}" | sed 's|^f/||')
@@ -28,6 +29,7 @@ jobs:
               echo "," >> f/index.json
             fi
 
+            echo "Adding $path"
             read -r -d '' file_json <<- EOF
               {
                 "file": "${path}",
