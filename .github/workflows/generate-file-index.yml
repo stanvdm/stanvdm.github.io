@@ -39,6 +39,7 @@ jobs:
               }
           EOF
             echo "$file_json" >> f/index.json
+            echo "Successfully added $path"
           done
 
           echo "]" >> f/index.json
