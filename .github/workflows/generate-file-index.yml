@@ -1,0 +1,52 @@
+name: Generate file index
+
+on:
+  push:
+    paths:
+      - 'f/**'
+      - '.github/workflows/generate-file-index.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Generate file index
+        run: |
+          echo "[" > f/index.json
+
+          files=($(find f -type f -not -name "index.json" | sort))
+
+          for i in ${!files[@]}; do
+            echo $i
+            echo "${file[$i]}"
+            path=$(echo "${file[$i]}" | sed 's|^f/||')
+            size=$(stat -c %s "${files[$i]}")
+            birth=$(stat -c %y "${files[$i]}" | cut -d '.' -f 1)
+            modify=$(stat -c %w "${files[$i]}" | cut -d '.' -f 1)
+
+            if [ "$i" != 0 ]; then
+              echo "," >> f/index.json
+            fi
+
+            read -r -d '' file_json <<- EOF
+              {
+                "file": "${path}",
+                "size": ${size},
+                "birth": "${birth}",
+                "modify": "${modify}"
+              }
+          EOF
+            echo "$file_json" >> f/index.json
+          done
+
+          echo "]" >> f/index.json
+
+          cat f/index.json
+      - name: Commit changes
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'action@nonexistent.email'
+          git add f/index.json
+          git commit -m "Update file index"
+          git push

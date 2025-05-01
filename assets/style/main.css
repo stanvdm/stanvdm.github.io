@@ -1,7 +1,8 @@
 :root {
-    --gap: 1em;
+    --gap: 1rem;
     --color-background: #0c0c0c;
     --color-text: white;
+	--scroll-margin: 3rem;
 }
 
 body {
@@ -10,62 +11,77 @@ body {
     box-sizing: border-box;
     height: 100vh;
     width: 100vw;
-    padding: var(--gap);
-    font-family: monospace;
+    padding: 0 calc(var(--gap) / 2);
+	padding-top: var(--gap);
+    font-family:  monospace;
 }
 
 /* MAIN EDITOR */
+/*
+* section = buffer
+* article = editor
+* aside = statusline
+* */
 main {
     display: flex;
-    gap: var(--gap);
-    overflow: auto;
-    height: round(down, calc(100% - 1em), 1em);
+    gap: calc(var(--gap) / 2);
+    height: round(down, calc(100% - 1rem), 1rem);
 }
 
 section {
+	position: relative;
     max-height: 100%;
-    overflow: auto;
-    scrollbar-width: none;
     flex: 1 1 0px;
     counter-reset: linenr;
 }
 
-section > * {
+article {
+    overflow: auto;
+    scrollbar-width: none;
+	height: calc(100% - 1rem);
+}
+
+article > * {
     display: block;
     counter-increment: linenr;
-    margin-left: 2.5em;
+    margin-left: 2.5rem;
     position: relative;
-    scroll-margin-top: 3em;
-    scroll-margin-bottom: 3em;
+    scroll-margin-top: var(--scroll-margin);
+    scroll-margin-bottom: var(--scroll-margin);
+	line-height: 1rem;
 }
 
-section > * *{
-    display: inline;
-}
-
-section > *::before {
+article > *::before {
     position: absolute;
     text-align: right;
     content: counter(linenr);
     right: 100%;
-    margin-right: .5em;
-    width: 2em;
+    margin-right: .5rem;
+    width: 2rem;
 }
 
-section > .selected {
+article > .selected {
     background-color: red;
 }
 
 #cursor {
     background-color: white;
     color: black;
+	display: inline-block;
+	line-height: 1rem;
 }
 
-/* FOOTER */
-footer {
+aside {
+	display: block;
     width: 100%;
+	height: 1rem;
     background-color: white;
     color: black;
     display: flex;
     justify-content: space-between;
+}
+
+footer {
+	width: 100%;
+	height: 1rem;
 }

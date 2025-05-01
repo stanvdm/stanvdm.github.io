@@ -33,17 +33,17 @@ function setCursorNthCharInLine(line, n) {
 }
 
 function updateBottomBar(cursorPos, bufferElement) {
-    let scrollIndicator;
-    if(bufferElement.scrollHeight <= bufferElement.clientHeight)
+    const e = bufferElement.querySelector(`article`);
+    const percentage = Math.ceil((e.scrollTop + e.clientHeight) / e.scrollHeight * 100);
+    let scrollIndicator = percentage + '%';
+    if(e.scrollHeight <= e.clientHeight)
         scrollIndicator = 'All';
-    else if(bufferElement.scrollTop === 0)
+    else if(e.scrollTop === 0)
         scrollIndicator = 'Top';
-    else if(Math.ceil(bufferElement.clientHeight + bufferElement.scrollTop) >= bufferElement.scrollHeight)
+    else if(percentage >= 100)
         scrollIndicator = 'Bot';
-    else
-        scrollIndicator = Math.round((bufferElement.scrollTop + bufferElement.clientHeight) / bufferElement.scrollHeight * 100) + '%';
 
-    document.querySelector(`.cursor-info`).innerHTML = `${cursorPos.y + 1},${cursorPos.x + 1} ${scrollIndicator}`
+    bufferElement.querySelector(`aside`).innerHTML = `<span>[buffer title] (00:59 01/01/1970)</span><span>${cursorPos.y + 1},${cursorPos.x + 1} ${scrollIndicator}</span>`;
 }
 
 function scrollIntoViewIfNotVisible(e) {
@@ -54,8 +54,12 @@ function scrollIntoViewIfNotVisible(e) {
     if (e.getBoundingClientRect().top < topBound) e.scrollIntoView();
 }
 
+function createBuffer(path="/", file="") {
+    
+}
+
 function main() {
-    const lines = document.querySelectorAll(`section > *`);
+    const lines = document.querySelectorAll(`article > *`);
     const cursorPos = { x: 0, y: 0 };
     setCursor(lines, cursorPos);
     
