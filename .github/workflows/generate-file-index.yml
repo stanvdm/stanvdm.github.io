@@ -22,10 +22,10 @@ jobs:
           echo "${#files[@]} files found"
 
           for i in ${!files[@]}; do
-            path=${files[$i]}
-            size=$(stat -c %s "${path}")
-            birth=$(stat -c %y "${path}" | cut -d '.' -f 1)
-            modify=$(stat -c %w "${path}" | cut -d '.' -f 1)
+            path="/${files[$i]}"
+            size=$(stat -c %s "${files[$i]}")
+            birth=$(stat -c %y "${files[$i]}" | cut -d '.' -f 1)
+            modify=$(stat -c %w "${files[$i]}" | cut -d '.' -f 1)
 
             if [ "$i" != 0 ]; then
               echo "," >> f/index.json
