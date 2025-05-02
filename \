@@ -36,7 +36,6 @@ main {
 section {
     position: relative;
     max-height: 100%;
-    max-width: 100%;
     flex: 1 1 0px;
     counter-reset: linenr;
 }

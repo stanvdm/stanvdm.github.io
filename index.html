@@ -9,15 +9,21 @@
     <link rel="stylesheet" href="./assets/style/reset.css">
     <link rel="stylesheet" href="./assets/style/main.css">
 
-    <script src="./assets/script/main.js"></script>
+    <script src="./assets/script/main.js" type="module"></script>
 </head>
 
 <body>
     <main>
         <section>
             <article>
-                <a href="#">../</a>
-                <a href="#">./</a>
+                <p>" ============================================================================</p>
+                <p>" Notrw Directory Listing                                          (notrw v1)</p>
+                <p>" /${path}</p>
+                <p>" Sorted by name</p>
+                <p>" Quick Help: <span class="highlight">&lt;F1&gt;</span>:help  -:go up dir  D:delete  R:rename  s:sort-by  x:special</p>
+                <p>" ==============================================================================</p>
+                <p data-link="">../</p>
+                <p data-link="">./</p>
             </article>
             <aside></aside>
         </section>
@@ -137,6 +143,8 @@
         </section>
     </main>
     <footer>
+        <span></span>
+        <span class="partial-command"></span>
     </footer>
 </body>
 
