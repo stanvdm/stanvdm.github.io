@@ -20,7 +20,6 @@ async function generateBuffer(path="/") {
                 const name = pathArr.length > 1 ? `${pathArr[0]}/` : pathArr[0];
                 return {...prev, [name]: cur}
             }, {});
-            console.log("files", files);
             return `
             <section class="active notrw" data-path="${path}">
                 <article>
@@ -30,8 +29,8 @@ async function generateBuffer(path="/") {
                     <p>" Sorted by name</p>
                     <p>" Quick Help: <span class="highlight">&lt;F1&gt;</span>:help  -:go up dir  D:delete  R:rename  s:sort-by  x:special</p>
                     <p>" ==============================================================================</p>
-                    <p data-link="${path.replace(/\/.*\/$/, "/")}"><span class="cursor" data-x="0" data-y="6">.</span>./</p>
-                    <p data-link="${path}">./</p>
+                    <p data-path="${path.replace(/\/.*\/$/, "/")}"><span class="cursor" data-x="0" data-y="6">.</span>./</p>
+                    <p data-path="${path}">./</p>
                     ${Object.entries(files).map(([k, v]) => `<p data-path="${path}${k}">${k}</p>`).join("")}
                 </article>
                 <aside></aside>
@@ -39,7 +38,6 @@ async function generateBuffer(path="/") {
         });
     } else {
         return fetch(path).then(res => res.text()).then(f => {
-            console.log(f);
             return `
             <section class="active" data-path="${path}">
                 <article>
@@ -174,6 +172,10 @@ class Buffer {
         return this.e.querySelectorAll(`article > *`);
     }
 
+    getPath() {
+        return this.e.dataset?.path ?? "";
+    }
+
     isActive() {
         return this.e.classList.contains('active');
     }
@@ -184,13 +186,19 @@ class Buffer {
 
     makeActive() {
         if(!this.isActive()) {
-            document.querySelector(`section.active`).classList.toggle('active');
+            document.querySelector(`section.active`)?.classList?.toggle('active');
             this.e.classList.toggle('active');
         }
     }
 
-    replace(html) {
-        this.e.innerHTML = html;
+    quit() {
+        this.e.remove();
+        const activeBuffers = this.interpreter.getAllVisibleBuffers();
+        console.log(activeBuffers);
+        if(activeBuffers.length <= 0)
+            openBuffer(this.interpreter);
+        else
+            activeBuffers[0].makeActive();
     }
 
     toggleVisible() {
@@ -282,11 +290,18 @@ const Motions = {
         "<A-w>s":    (buffer) => {}, //split window
         "<A-w>v":    (buffer) => {}, //split window vertically
         "<A-w>w":    (buffer) => {}, //switch windows
+        "<A-w>q":    (buffer) => { buffer.quit() }, //quit a window
+        "<A-w>h":    (buffer) => {}, //move cursor to left window
+        "<A-w>l":    (buffer) => {}, //move cursor to right window
+        "<A-w>j":    (buffer) => {}, //move cursor to window below
+        "<A-w>k":    (buffer) => {}, //move cursor to window above
     },
     NOTRW: {
-        "-":        (buffer) => {}, //go up dir
-        "o":        (buffer, path) => { openBuffer(buffer.interpreter, path) }, //open in new buffer
-        "Enter":    (buffer, path) => { replaceBuffer(buffer, path) }, //open in current buffer
+        "o":        (buffer, selectedPath) => { openBuffer(buffer.interpreter, selectedPath) }, //open in new buffer
+        "Enter":    (buffer, selectedPath) => { replaceBuffer(buffer, selectedPath) }, //open in current buffer
+        "-":        (buffer) => { replaceBuffer(buffer, buffer.getPath().replace(/\/.*\/$/, "/")) }, //go up dir
+        "D":        (buffer) => { buffer.interpreter.commandLine.log("Permission denied") },
+        "R":        (buffer) => { buffer.interpreter.commandLine.log("Permission denied") }
     }
 };
 
@@ -312,6 +327,7 @@ class Interpreter {
         this.mult = "";
         this.partialCommand = "";
         this.commandLine.command = "";
+        this.commandLine.logText = "";
         this.commandLine.setInactive();
     }
 
@@ -331,7 +347,9 @@ class Interpreter {
 
         if(this.getActiveBuffer().e.classList.contains("notrw") && key in Motions.NOTRW) {
             const buffer = this.getActiveBuffer();
-            Motions.NOTRW[key](buffer, buffer.cursor.getCurrentLine()?.dataset?.path);
+            const selectedPath = buffer.cursor.getCurrentLine()?.dataset?.path;
+            if(selectedPath)
+                Motions.NOTRW[key](buffer, selectedPath);
             return;
         }
         
@@ -350,6 +368,20 @@ class Interpreter {
         }
     }
 
+    interpretBufferManipulation(key) {
+        const cmd = `${this.partialCommand}${key}`;
+        if(cmd in Motions.BUFFER_MANIPULATION) {
+            Motions.BUFFER_MANIPULATION[cmd](this.getActiveBuffer());
+            this.mult = "";
+            this.partialCommand = "";
+            return;
+        }
+
+        if(Object.keys(Motions.BUFFER_MANIPULATION).some(k => k.startsWith(`${this.partialCommand}${key}`))) {
+            this.partialCommand += key;
+        }
+    }
+
     interpret(keyDownEvent) {
         let key = keyDownEvent.key;
         if(this.partialCommand === "" && keyDownEvent.altKey) key = `<A-${key}>`
@@ -361,6 +393,7 @@ class Interpreter {
             switch(this.mode) {
                 case Modes.NORMAL:
                     this.interpretNormal(key);
+                    this.interpretBufferManipulation(key);
                     break;
                 case Modes.COMMAND:
                     this.commandLine.input(key);
@@ -375,6 +408,7 @@ class Interpreter {
                 case Modes.V_LINE:
                 case Modes.V_BLOCK:
                     this.commandLine.log("Visual mode is not yet implemented.");
+                    this.interpretBufferManipulation(key);
                     break;
             }
         }
