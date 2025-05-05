@@ -1,14 +1,15 @@
 [
   {
+    "file": "/f/lorem-ipsum-markdown-example.md",
+    "size": 2843,
+    "birth": "2025-05-05 21:00:38",
+    "modify": "2025-05-05 21:00:38"
+  }
+,
+  {
     "file": "/f/test.md",
     "size": 56,
-    "birth": "2025-05-02 19:30:34",
-    "modify": "2025-05-02 19:30:34"
-  },
-  {
-    "file": "/f/lorem-ipsum-markdown-example.md",
-    "size": 56,
-    "birth": "2025-05-02 19:30:34",
-    "modify": "2025-05-02 19:30:34"
+    "birth": "2025-05-05 21:00:38",
+    "modify": "2025-05-05 21:00:38"
   }
 ]
