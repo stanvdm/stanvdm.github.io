@@ -1,0 +1,177 @@
+/**
+ * started from https://github.com/markdowncss/retro as a base
+ */
+.markdown > article {
+    max-width: 64rem;
+    padding: 0 1rem;
+    margin: 0 auto;
+}
+
+.markdown > article {
+    * {
+	margin: 0;
+	padding: 0;
+	height: auto;
+	width: auto;
+	line-height: 1;
+	white-space: normal;
+	/*position: relative;*/
+    }
+
+    *::before, *::after {
+	content: none;
+	margin: 0;
+	padding: 0;
+    }
+
+    .cursor:not(.not-focus) {
+	background-color: inherit;
+	color: inherit;
+    }
+    .cursor:not(.not-focus):empty {
+	position: absolute;
+    }
+
+    > *:has(.cursor:not(.not-focus))::before {
+	position: absolute;
+	content: "";
+	height: 100%;
+	width: 3px;
+	margin-right: .5rem;
+	top: 0;
+	background-color: var(--color-bg-bright);
+    }
+
+    pre,
+    code {
+	font-family: Menlo, Monaco, "Courier New", monospace;
+	white-space: preserve nowrap;
+	background-color: var(--color-bg-bright);
+	border-radius: .2em;
+    }
+
+    pre {
+	padding: .5rem;
+	margin-bottom: .5rem;
+	line-height: 1.25;
+	overflow: visible;
+	/*overflow-x: auto;*/
+	/*scrollbar-width: thin;*/
+    }
+
+    :not(pre) code {
+	padding: .1rem;
+	color: var(--color-primary-bright);
+    }
+
+    a,
+    a:visited {
+	color: var(--color-primary-bright);
+    }
+
+    a:hover,
+    a:focus,
+    a:active {
+	color: var(--color-primary-normal);
+    }
+
+    .retro-no-decoration {
+	text-decoration: none;
+    }
+
+    body {
+	line-height: 1.85;
+    }
+
+    p {
+	font-size: 1rem;
+	margin-bottom: 1.3rem;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+	margin: 1.414rem 0 .5rem;
+	font-weight: inherit;
+	line-height: 1.42;
+    }
+
+    h1 {
+	margin-top: 0;
+	font-size: 3.998rem;
+    }
+
+    h2 {
+	font-size: 2.827rem;
+    }
+
+    h3 {
+	font-size: 1.999rem;
+    }
+
+    h4 {
+	font-size: 1.414rem;
+    }
+
+    h5 {
+	font-size: 1.121rem;
+    }
+
+    h6 {
+	font-size: .88rem;
+    }
+
+    small {
+	font-size: .707em;
+    }
+
+    /* https://github.com/mrmrs/fluidity */
+
+    img,
+    canvas,
+    iframe,
+    video,
+    svg,
+    select,
+    textarea {
+	max-width: 100%;
+    }
+
+    body {
+	color: var(--color-fg-normal);
+	font-family: "Courier New";
+	line-height: 1.45;
+	margin: 6rem auto 1rem;
+	max-width: 48rem;
+	padding: .25rem;
+    }
+
+    blockquote {
+	border-left: 3px solid var(--color-primary-dim);
+	padding-left: 1rem;
+    }
+
+    li {
+	display: list-item;
+    }
+
+    ul {
+	list-style: disc;
+	list-style-position: inside;
+    }
+
+    ol {
+	list-style: decimal;
+	list-style-position: inside;
+    }
+
+    strong {
+	font-weight: bold;
+    }
+
+    i {
+	font-style: italic;
+    }
+}
+

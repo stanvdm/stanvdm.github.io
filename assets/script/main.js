@@ -10,8 +10,13 @@ function scrollIntoViewIfNotVisible(e) {
     if (e.getBoundingClientRect().top < topBound) e.scrollIntoView();
 }
 
-async function generateBuffer(path="/") {
-    // TODO: allow empty buffer
+/**
+ * @param {String} path to file or dir
+ * @param {Array<String>} classList classes to add to buffer element
+ * @param {Function} parser if path leads to a file, the contents of the file is passed through the parser before being added to the html
+ */
+async function generateBuffer(path="/", classList=[], parser=f => f.split("\n").map(l => `<p>${l} </p>`).join("")) {
+    // TODO: allow empty buffer with no path
     if (!path) path = "/";
     if(path.endsWith("/")) {
         return fetchFileIndex(fi => {
@@ -21,7 +26,7 @@ async function generateBuffer(path="/") {
                 return {...prev, [name]: cur}
             }, {});
             return `
-            <section class="active notrw" data-path="${path}">
+            <section class="active notrw ${classList.join(" ")}" data-path="${path}">
                 <article>
                     <p>" ============================================================================</p>
                     <p>" Notrw Directory Listing                                          (notrw v1)</p>
@@ -39,10 +44,9 @@ async function generateBuffer(path="/") {
     } else {
         return fetch(path).then(res => res.text()).then(f => {
             return `
-            <section class="active" data-path="${path}">
+            <section class="active ${classList.join(" ")}" data-path="${path}">
                 <article>
-                    ${f.split("\n").map(l => `<p>${l} </p>`).join("")}
-                    <p> </p>
+                    ${parser(f)}
                 </article>
                 <aside></aside>
             </section>`;
@@ -53,11 +57,13 @@ async function generateBuffer(path="/") {
 /**
  * @param {Buffer} oldBuffer
  * @param {String} path
+ * @param {Array<String>} classList classes to add to buffer element
+ * @param {Function} parser if path leads to a file, the contents of the file is passed through the parser before being added to the html
  */
-async function replaceBuffer(oldBuffer, path="") {
+async function replaceBuffer(oldBuffer, path="", classList=[], parser=undefined) {
     document.querySelector(`.active`)?.classList.toggle("active");
     const nodeWithNewBuffer = document.createElement("div");
-    nodeWithNewBuffer.innerHTML = await generateBuffer(path);
+    nodeWithNewBuffer.innerHTML = await generateBuffer(path, classList, parser);
     oldBuffer.e.replaceWith(...nodeWithNewBuffer.childNodes);
 
     const newBuffer = new Buffer(document.querySelector(`.active`), oldBuffer.interpreter);
@@ -68,14 +74,14 @@ async function replaceBuffer(oldBuffer, path="") {
 /**
  * @param {Interpreter} interpreter
  * @param {String} path
+ * @param {Array<String>} classList classes to add to buffer element
+ * @param {Function} parser if path leads to a file, the contents of the file is passed through the parser before being added to the html
  */
-async function openBuffer(interpreter, path="") {
+async function openBuffer(interpreter, path="", classList=[], parser=undefined) {
     document.querySelector(`.active`)?.classList.toggle("active");
-    document.querySelector(`main`).innerHTML += await generateBuffer(path);
+    document.querySelector(`main`).innerHTML += await generateBuffer(path, classList, parser);
 
-    const newBuffer = new Buffer(document.querySelector(`.active`), interpreter);
-    newBuffer.renderStatusLine();
-    newBuffer.cursor.render();
+    interpreter.render();
 }
 
 function updateCommandLine(partialCommand) {
@@ -191,14 +197,34 @@ class Buffer {
         }
     }
 
+    /**
+     * @param {String} direction "h": left, "l": right, "k": up, "j": down
+     */
+    moveActive(direction="k") {
+        const buffers = this.interpreter.getAllVisibleBuffers();
+        const activeIndex = buffers.findIndex(b => b.e === this.e);
+        console.log(activeIndex);
+        switch(direction) {
+            case "h":
+                break;
+            case "l":
+                break;
+            case "k":
+                buffers[Math.max(activeIndex - 1, 0)].makeActive();
+                break;
+            case "j":
+                buffers[Math.min(activeIndex + 1, buffers.length - 1)].makeActive();
+                break;
+        }
+    }
+
     quit() {
         this.e.remove();
         const activeBuffers = this.interpreter.getAllVisibleBuffers();
-        console.log(activeBuffers);
         if(activeBuffers.length <= 0)
             openBuffer(this.interpreter);
         else
-            activeBuffers[0].makeActive();
+            activeBuffers[activeBuffers.length - 1].makeActive();
     }
 
     toggleVisible() {
@@ -212,7 +238,7 @@ class Buffer {
             if(this.isActive()) {
                 const viewportPosition = calculateViewportPosition(this.e.querySelector(`article`));
                 const mode = this.interpreter.mode;
-                this.e.querySelector(`aside`).innerHTML = `<span>${mode} ${bufferTitle} (00:59 01/01/1970)</span><span>${this.cursor.y + 1}:${this.cursor.x + 1} ${viewportPosition}</span>`;
+                this.e.querySelector(`aside`).innerHTML = `<span><span class="highlight"> ${mode} </span> ${bufferTitle} </span><span class="highlight"> ${this.cursor.y + 1}:${this.cursor.x + 1} ${viewportPosition} </span>`;
             } else {
                 this.e.querySelector(`aside`).innerHTML = `<span>${bufferTitle}</span>`;
             }
@@ -264,6 +290,16 @@ class CommandLine {
     }
 }
 
+const Parsers = {
+    ".md": (f) => marked.parse(f),
+}
+
+function selectParserByExtension(path) {
+    const extension = /\.[a-zA-Z0-9]+$/.exec(path)[0];
+    console.log(extension);
+    return Parsers[extension] || undefined;
+}
+
 const Modes = {
     NORMAL: "Normal",
     INSERT: "Insert",
@@ -287,21 +323,22 @@ const Motions = {
     },
     INSERT: {},
     BUFFER_MANIPULATION: {
-        "<A-w>s":    (buffer) => {}, //split window
+        "<A-w>s":    (buffer) => { openBuffer(buffer.interpreter, buffer.getPath()) }, //split window
         "<A-w>v":    (buffer) => {}, //split window vertically
         "<A-w>w":    (buffer) => {}, //switch windows
         "<A-w>q":    (buffer) => { buffer.quit() }, //quit a window
-        "<A-w>h":    (buffer) => {}, //move cursor to left window
-        "<A-w>l":    (buffer) => {}, //move cursor to right window
-        "<A-w>j":    (buffer) => {}, //move cursor to window below
-        "<A-w>k":    (buffer) => {}, //move cursor to window above
+        "<A-w>h":    (buffer) => { buffer.moveActive("h") }, //move cursor to left window
+        "<A-w>l":    (buffer) => { buffer.moveActive("l") }, //move cursor to right window
+        "<A-w>j":    (buffer) => { buffer.moveActive("j") }, //move cursor to window below
+        "<A-w>k":    (buffer) => { buffer.moveActive("k") }, //move cursor to window above
     },
     NOTRW: {
         "o":        (buffer, selectedPath) => { openBuffer(buffer.interpreter, selectedPath) }, //open in new buffer
         "Enter":    (buffer, selectedPath) => { replaceBuffer(buffer, selectedPath) }, //open in current buffer
         "-":        (buffer) => { replaceBuffer(buffer, buffer.getPath().replace(/\/.*\/$/, "/")) }, //go up dir
         "D":        (buffer) => { buffer.interpreter.commandLine.log("Permission denied") },
-        "R":        (buffer) => { buffer.interpreter.commandLine.log("Permission denied") }
+        "R":        (buffer) => { buffer.interpreter.commandLine.log("Permission denied") },
+        "x":        (buffer, selectedPath) => { replaceBuffer(buffer, selectedPath, ["markdown"], selectParserByExtension(selectedPath)) },
     }
 };
 
@@ -332,7 +369,7 @@ class Interpreter {
     }
 
     interpretNormal(key) {
-        if(/[1-9]/.test(key) || (this.mult && key === "0")) {
+        if(/^[1-9]$/.test(key) || (this.mult && key === "0")) {
             this.partialCommand = "";
             this.mult += key;
             return;
