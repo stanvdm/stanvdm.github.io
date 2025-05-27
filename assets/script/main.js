@@ -10,48 +10,53 @@ function scrollIntoViewIfNotVisible(e) {
     if (e.getBoundingClientRect().top < topBound) e.scrollIntoView();
 }
 
+function fileExtensionFromPath(path) {
+    return /(?<=\.)[a-zA-Z0-9]+$/.exec(path)?.at(0) || "";
+}
+
 /**
  * @param {String} path to file or dir
  * @param {Array<String>} classList classes to add to buffer element
  * @param {Function} parser if path leads to a file, the contents of the file is passed through the parser before being added to the html
  */
 async function generateBuffer(path="/", classList=[], parser=f => f.split("\n").map(l => `<p>${l} </p>`).join("")) {
-    // TODO: allow empty buffer with no path
-    if (!path) path = "/";
-    if(path.endsWith("/")) {
-        return fetchFileIndex(fi => {
+    const type = path.endsWith("/") ? "notrw" : fileExtensionFromPath(path);
+
+    let body = `<p> </p>`;
+    if(type === "notrw") {
+        body = await fetchFileIndex(fi => {
             const files = fi.filter(f => f.file.startsWith(path)).reduce((prev, cur) => {
                 const pathArr = cur.file.replace(path, '').split("/");
                 const name = pathArr.length > 1 ? `${pathArr[0]}/` : pathArr[0];
                 return {...prev, [name]: cur}
             }, {});
+
             return `
-            <section class="active notrw ${classList.join(" ")}" data-path="${path}">
-                <article>
-                    <p>" ============================================================================</p>
-                    <p>" Notrw Directory Listing                                          (notrw v1)</p>
-                    <p>" ${path}</p>
-                    <p>" Sorted by name</p>
-                    <p>" Quick Help: <span class="highlight">&lt;F1&gt;</span>:help  -:go up dir  D:delete  R:rename  s:sort-by  x:special</p>
-                    <p>" ==============================================================================</p>
-                    <p data-path="${path.replace(/\/.*\/$/, "/")}"><span class="cursor" data-x="0" data-y="6">.</span>./</p>
-                    <p data-path="${path}">./</p>
-                    ${Object.entries(files).map(([k, v]) => `<p data-path="${path}${k}">${k}</p>`).join("")}
-                </article>
-                <aside></aside>
-            </section>`;
+                <p>" ============================================================================</p>
+                <p>" Notrw Directory Listing                                          (notrw v1)</p>
+                <p>" ${path}</p>
+                <p>" Sorted by name</p>
+                <p>" Quick Help: <span class="highlight">&lt;F1&gt;</span>:help  -:go up dir  D:delete  R:rename  s:sort-by  x:special</p>
+                <p>" ==============================================================================</p>
+                <p data-path="${path.replace(/\/.*\/$/, "/")}"><span class="cursor" data-x="0" data-y="6">.</span>./</p>
+                <p data-path="${path}">./</p>
+                ${Object.entries(files).map(([k, v]) => `<p data-path="${path}${k}">${k}</p>`).join("")}`;
         });
     } else {
-        return fetch(path).then(res => res.text()).then(f => {
-            return `
-            <section class="active ${classList.join(" ")}" data-path="${path}">
-                <article>
-                    ${parser(f)}
-                </article>
-                <aside></aside>
-            </section>`;
+        body = await fetch(path).then(res => res.text()).then(f => {
+            return parser(f);
+        }).catch(_ => {
+            return body;
         });
     }
+
+    return `
+        <section class="active ${classList.join(" ")}" data-path="${path}" data-type="${type}">
+            <article>
+                ${body}
+            </article>
+            <aside></aside>
+        </section>`;
 }
 
 /**
@@ -60,7 +65,7 @@ async function generateBuffer(path="/", classList=[], parser=f => f.split("\n").
  * @param {Array<String>} classList classes to add to buffer element
  * @param {Function} parser if path leads to a file, the contents of the file is passed through the parser before being added to the html
  */
-async function replaceBuffer(oldBuffer, path="", classList=[], parser=undefined) {
+async function replaceBuffer(oldBuffer, path, classList, parser=undefined) {
     document.querySelector(`.active`)?.classList.toggle("active");
     const nodeWithNewBuffer = document.createElement("div");
     nodeWithNewBuffer.innerHTML = await generateBuffer(path, classList, parser);
@@ -77,7 +82,7 @@ async function replaceBuffer(oldBuffer, path="", classList=[], parser=undefined)
  * @param {Array<String>} classList classes to add to buffer element
  * @param {Function} parser if path leads to a file, the contents of the file is passed through the parser before being added to the html
  */
-async function openBuffer(interpreter, path="", classList=[], parser=undefined) {
+async function openBuffer(interpreter, path, classList, parser=undefined) {
     document.querySelector(`.active`)?.classList.toggle("active");
     document.querySelector(`main`).innerHTML += await generateBuffer(path, classList, parser);
 
@@ -95,6 +100,15 @@ function calculateViewportPosition(viewport) {
     else if(viewport.scrollTop === 0) return 'Top';
     else if(percentage >= 100) return 'Bot';
     return percentage + '%';
+}
+
+function isFirstVisit() {
+    const hasVisited = localStorage.getItem("hasVisited");
+    if(hasVisited === null) {
+        localStorage.setItem("hasVisited", 1);
+        return true;
+    }
+    return false;
 }
 
 class Cursor {
@@ -130,6 +144,22 @@ class Cursor {
         const currentCursor = this.getCurrentCursor();
         if(currentCursor) currentCursor.replaceWith(...currentCursor.childNodes);
     }
+
+    moveForwardToRegex(regex) {
+        const lines = this.buffer.getLines();
+        let i = lines[this.y].textContent.search(RegExp(`(?<=.{${this.x + 1}})` + regex.source));
+
+        while(i < 0 && this.y < lines.length - 1) {
+            this.y++; 
+            const text = lines[this.y].textContent;
+            i = text.search(regex);
+            if(text.trim() === "") i = 0;
+        }
+        const lineLen = lines[this.y].textContent.length;
+        this.x = i < lineLen && i >= 0 ? i : lineLen - 1;
+        this.render();
+    }
+
 
     render() {
         this.derender();
@@ -182,6 +212,11 @@ class Buffer {
         return this.e.dataset?.path ?? "";
     }
 
+    getBufferType() {
+        const type = this.e.dataset?.type ?? "";
+        return BufferTypes[type];
+    }
+
     isActive() {
         return this.e.classList.contains('active');
     }
@@ -203,7 +238,6 @@ class Buffer {
     moveActive(direction="k") {
         const buffers = this.interpreter.getAllVisibleBuffers();
         const activeIndex = buffers.findIndex(b => b.e === this.e);
-        console.log(activeIndex);
         switch(direction) {
             case "h":
                 break;
@@ -261,6 +295,10 @@ class CommandLine {
         this.logText = text;
     }
 
+    logNYI() {
+        this.log("Not yet implemented");
+    }
+
     setInactive() {
         this.interpreter.getActiveBuffer().cursor.getCurrentCursor().classList.remove("not-focus");
         this.e.classList.remove("active");
@@ -290,14 +328,14 @@ class CommandLine {
     }
 }
 
-const Parsers = {
-    ".md": (f) => marked.parse(f),
-}
-
-function selectParserByExtension(path) {
-    const extension = /\.[a-zA-Z0-9]+$/.exec(path)[0];
-    console.log(extension);
-    return Parsers[extension] || undefined;
+const BufferTypes = {
+    "notrw": {
+        name: "notrw",
+    },
+    "md": {
+        name: "Markdown",
+        special: (buffer, selectedPath) => { replaceBuffer(buffer, selectedPath, ["markdown"], (f) => marked.parse(f)) },
+    },
 }
 
 const Modes = {
@@ -320,6 +358,8 @@ const Motions = {
         "G":    (cursor, n) => { cursor.setY((n ?? cursor.buffer.getLines().length) - 1) },
         "0":    (cursor) => { cursor.setX(0) },
         "$":    (cursor) => { cursor.setX(cursor.getCurrentLine().textContent.length) },
+        //TODO: fix n
+        "w":    (cursor, n) => { cursor.moveForwardToRegex(/(?<=\s|\b|^)\S/) },
     },
     INSERT: {},
     BUFFER_MANIPULATION: {
@@ -338,7 +378,9 @@ const Motions = {
         "-":        (buffer) => { replaceBuffer(buffer, buffer.getPath().replace(/\/.*\/$/, "/")) }, //go up dir
         "D":        (buffer) => { buffer.interpreter.commandLine.log("Permission denied") },
         "R":        (buffer) => { buffer.interpreter.commandLine.log("Permission denied") },
-        "x":        (buffer, selectedPath) => { replaceBuffer(buffer, selectedPath, ["markdown"], selectParserByExtension(selectedPath)) },
+        "s":        (buffer) => { buffer.interpreter.commandLine.logNYI() },
+        "x":        (buffer, selectedPath) => { BufferTypes[fileExtensionFromPath(selectedPath)]?.special(buffer, selectedPath) },
+        "F1":       () => { modal.showHelp() },
     }
 };
 
@@ -382,7 +424,7 @@ class Interpreter {
             return;
         }
 
-        if(this.getActiveBuffer().e.classList.contains("notrw") && key in Motions.NOTRW) {
+        if(key in Motions.NOTRW && this.getActiveBuffer().getBufferType()?.name === "notrw") {
             const buffer = this.getActiveBuffer();
             const selectedPath = buffer.cursor.getCurrentLine()?.dataset?.path;
             if(selectedPath)
@@ -421,8 +463,7 @@ class Interpreter {
 
     interpret(keyDownEvent) {
         let key = keyDownEvent.key;
-        if(this.partialCommand === "" && keyDownEvent.altKey) key = `<A-${key}>`
-        console.log(key);
+        if(this.partialCommand === "" && keyDownEvent.altKey) key = `<A-${key}>`;
 
         if(key === "Escape") {
             this.toNormalMode();
@@ -457,6 +498,36 @@ class Interpreter {
     }
 }
 
+const modal = new class {
+    constructor() {
+        this.e = document.querySelector(`.modal`);
+        this.e.querySelector(`.close-btn`).addEventListener("click", () => this.close());
+        if(isFirstVisit()) {
+            this.showHelp();
+        }
+    }
+
+    showHelp() {
+        fetch("/f/help.md").then(res => res.text()).then(f => { 
+            this.e.querySelector(`.modal-content`).innerHTML = marked.parse(f);
+        }).then(this.open());
+    }
+
+    isOpen() {
+        return !this.e.classList.contains("hidden");
+    }
+
+    open() {
+        this.e.classList.remove("hidden");
+    }
+
+    close() {
+        this.e.classList.add("hidden");
+    }
+}
+
+const preventDefaultKeys = ["F1"];
+
 async function main() {
     const interpreter = new Interpreter();
 
@@ -467,6 +538,13 @@ async function main() {
     interpreter.getActiveBuffer().cursor.render();
 
     window.addEventListener("keydown", function(e) {
+        if(modal.isOpen()) {
+            if(e.key === "Escape") modal.close();
+            return;
+        }
+
+        if(preventDefaultKeys.includes(e.key)) e.preventDefault();
+
         interpreter.interpret(e); 
         interpreter.render();
     });

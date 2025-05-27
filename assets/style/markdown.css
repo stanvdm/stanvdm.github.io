@@ -2,12 +2,13 @@
  * started from https://github.com/markdowncss/retro as a base
  */
 .markdown > article {
-    max-width: 64rem;
+    width: 64rem;
+    max-width: 100%;
     padding: 0 1rem;
     margin: 0 auto;
 }
 
-.markdown > article {
+.markdown {
     * {
 	margin: 0;
 	padding: 0;
