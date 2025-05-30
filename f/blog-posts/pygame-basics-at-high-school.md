@@ -34,3 +34,4 @@ The live coding went pretty smoothly. Some bugs appeared, but I could resolve th
 We then answered some questions about courses, coding, Linux, etc. both from students and the teacher. The remaining time was spent answering these questions and helping some students to further develop their game.
 
 ## Conclusion
+TODO
