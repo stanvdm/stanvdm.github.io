@@ -17,6 +17,9 @@
     --color-primary-bright: #d07c83;
     --color-primary-normal: #ac555c;
     --color-primary-dim:    #892c33;
+
+    /* I don't know if this is a bug, but when this is not set, 1rem differs, where it is 13px in some elements and 16 in others */
+    font-size: 1rem;
 }
 
 body {

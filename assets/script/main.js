@@ -2,12 +2,69 @@ async function fetchFileIndex(callback) {
     return fetch("/f/index.json").then(res => res.json()).then(json => callback(json));
 }
 
-function scrollIntoViewIfNotVisible(e) {
+/**
+ * @param {HTMLElement} e
+ * @param {HTMLElement} scrollContainer
+ * @returns {}
+ */
+function elementNotVisibleInScroll(e, scrollContainer) {
     const styles = getComputedStyle(e);
-    const bottomBound = window.innerHeight - (Number(styles.scrollMarginBottom.slice(0, -2)) || 0)
-    const topBound = Number(styles.scrollMarginTop.slice(0, -2)) || 0
-    if (e.getBoundingClientRect().bottom > bottomBound) e.scrollIntoView(false);
-    if (e.getBoundingClientRect().top < topBound) e.scrollIntoView();
+    const topBound = scrollContainer.scrollTop + (Number(styles.scrollMarginTop.slice(0, -2)) || 0)
+    const bottomBound = scrollContainer.scrollTop + scrollContainer.clientHeight - (Number(styles.scrollMarginBottom.slice(0, -2)) || 0)
+
+    if(e.offsetTop < topBound) return "top";
+    if(e.offsetTop + e.clientHeight > bottomBound) return "bottom";
+    return false;
+}
+
+/**
+ * @param {HTMLElement} e
+ * @param {HTMLElement} scrollContainer
+ */
+function scrollIntoViewIfNotVisible(e, scrollContainer) {
+    const eNotVisible = elementNotVisibleInScroll(e, scrollContainer);
+
+    if(eNotVisible === "top") e.scrollIntoView();
+    if(eNotVisible === "bottom") e.scrollIntoView(false);
+}
+
+/**
+ * @param {HTMLElement} scrollContainer
+ * @param {boolean} [first=true] return first if true else return last
+ */
+function getFirstLastVisibleElement(scrollContainer, first=true) {
+    const elements = scrollContainer.children;
+    let last = null;
+
+    for(let i = 0; i < elements.length; i++) {
+        const e = elements[i];
+
+        if(elementNotVisibleInScroll(e, scrollContainer) === false) {
+            if(first) return {e, i};
+            last = i;
+        }
+    }
+
+    return {e: elements[last], i: last};
+}
+
+/**
+ * @param {Interpreter} interpreter
+ */
+function updateScrollEventListeners(interpreter) {
+    interpreter.getAllVisibleBuffers().forEach(b => {
+        b.e.querySelector(`article`).addEventListener("scroll", (ev) => { 
+            const scrollContainer = ev.currentTarget;
+            const e  = scrollContainer.querySelector(`:scope > *:has(.cursor)`);
+            const eNotVisible = elementNotVisibleInScroll(e, scrollContainer);
+
+            if(eNotVisible === "top" || eNotVisible === "bottom") {
+                const cursor = new Cursor(new Buffer(ev.currentTarget.parentElement, interpreter));
+                const y = getFirstLastVisibleElement(scrollContainer, eNotVisible === "top").i;
+                cursor.setY(y);
+            }
+        });
+    });
 }
 
 function fileExtensionFromPath(path) {
@@ -74,6 +131,8 @@ async function replaceBuffer(oldBuffer, path, classList, parser=undefined) {
     const newBuffer = new Buffer(document.querySelector(`.active`), oldBuffer.interpreter);
     newBuffer.renderStatusLine();
     newBuffer.cursor.render();
+
+    updateScrollEventListeners(oldBuffer.interpreter);
 }
 
 /**
@@ -86,7 +145,11 @@ async function openBuffer(interpreter, path, classList, parser=undefined) {
     document.querySelector(`.active`)?.classList.toggle("active");
     document.querySelector(`main`).innerHTML += await generateBuffer(path, classList, parser);
 
+    const newBuffer = interpreter.getActiveBuffer();
+    newBuffer.cursor.render();
     interpreter.render();
+
+    updateScrollEventListeners(interpreter);
 }
 
 function updateCommandLine(partialCommand) {
@@ -164,32 +227,35 @@ class Cursor {
     render() {
         this.derender();
         const line = this.buffer.getLines()[this.y];
-        if(line === "") line.innerHTML = `<span class="cursor" data-x="${this.x}" data-y="${this.y}" width=".5rem"></span>`;
 
-        // put cursor on nth char in line
-        const n = Math.min(line.textContent.length - 1, this.x);
-        const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
-        let node;
-        let totalLen = 0;
-        while(node = walker.nextNode()) {
-            const nodeLen = node.nodeValue.length;
+        if(this.buffer.e.classList.contains("markdown")) {
+            line.insertAdjacentHTML("afterbegin", `<span class="cursor" data-x="${this.x}" data-y="${this.y}"></span>`);
+        } else {
+            // put cursor on nth char in line
+            const n = Math.min(line.textContent.length - 1, this.x);
+            const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+            let node;
+            let totalLen = 0;
+            while(node = walker.nextNode()) {
+                const nodeLen = node.nodeValue.length;
 
-            if(totalLen + nodeLen > n) {
-                const i = n - totalLen;
+                if(totalLen + nodeLen > n) {
+                    const i = n - totalLen;
 
-                const before = node.nodeValue.substring(0, i);
-                const char = node.nodeValue.charAt(i);
-                const after = node.nodeValue.substring(i + 1);
+                    const before = node.nodeValue.substring(0, i);
+                    const char = node.nodeValue.charAt(i);
+                    const after = node.nodeValue.substring(i + 1);
 
-                const nodeWithCursor = document.createElement("div");
-                nodeWithCursor.innerHTML = `${before}<span class="cursor" data-x="${this.x}" data-y="${this.y}">${char}</span>${after}`;
-                node.replaceWith(...nodeWithCursor.childNodes);
+                    const nodeWithCursor = document.createElement("div");
+                    nodeWithCursor.innerHTML = `${before}<span class="cursor" data-x="${this.x}" data-y="${this.y}">${char}</span>${after}`;
+                    node.replaceWith(...nodeWithCursor.childNodes);
+                }
+
+                totalLen += nodeLen;
             }
-
-            totalLen += nodeLen;
         }
 
-        scrollIntoViewIfNotVisible(this.getCurrentLine());
+        scrollIntoViewIfNotVisible(this.getCurrentLine(), this.buffer.e.querySelector(`article`));
     }
 }
 
@@ -300,24 +366,54 @@ class CommandLine {
     }
 
     setInactive() {
+        if(!this.e.classList.contains("active")) return;
         this.interpreter.getActiveBuffer().cursor.getCurrentCursor().classList.remove("not-focus");
         this.e.classList.remove("active");
     }
 
     setActive() {
+        if(this.e.classList.contains("active")) return;
         this.interpreter.getActiveBuffer().cursor.getCurrentCursor().classList.add("not-focus");
         this.e.classList.add("active");
     }
 
+    clear() {
+        this.command = "";
+        this.logText = "";
+    }
+
+    interpretCommand() {
+        this.setInactive();
+
+        if(this.command in Motions.COMMAND) {
+            Motions.COMMAND[this.command](this.interpreter);
+            return;
+        } else if(/^:[0-9]+/.test(this.command)) {
+            const n = (Number(this.command.substring(1)) - 1);
+            this.interpreter.getActiveBuffer().cursor.setY(n > 0 ? n : 0);
+            return;
+        }
+
+        const matchingCommands = Object.keys(Motions.COMMAND).filter(k => k.startsWith(this.command));
+
+        if(matchingCommands.length === 1) {
+            Motions.COMMAND[matchingCommands[0]](this.interpreter);
+        } else if(matchingCommands.length > 1) {
+            this.interpreter.commandLine.log(`Ambiguous command, did you mean ${matchingCommands.join(", ")}`);
+        }
+    }
+
     input(key) {
         if(key === "Enter") {
-            //TODO: execute commands
+            this.interpretCommand();
             this.interpreter.toNormalMode();
         } else if(key === "Backspace") {
             this.command = this.command.substring(0, this.command.length - 1);
-            if(this.command.length <= 0) this.interpreter.toNormalMode();
-        } else {
-            //TODO: check if key is valid
+            if(this.command.length <= 0) {
+                this.clear();
+                this.interpreter.toNormalMode();
+            }
+        } else if(/^.$/.test(key)) {
             this.command += key;
         }
     }
@@ -350,37 +446,50 @@ const Modes = {
 
 const Motions = {
     MOVEMENT: {
-        "h":    (cursor, n) => { cursor.setX(cursor.x - (n ?? 1)) },
-        "j":    (cursor, n) => { cursor.setY(cursor.y + (n ?? 1)) },
-        "k":    (cursor, n) => { cursor.setY(cursor.y - (n ?? 1)) },
-        "l":    (cursor, n) => { cursor.setX(cursor.x + (n ?? 1)) },
-        "gg":   (cursor, n) => { cursor.setY((n ?? 1) - 1) },
-        "G":    (cursor, n) => { cursor.setY((n ?? cursor.buffer.getLines().length) - 1) },
-        "0":    (cursor) => { cursor.setX(0) },
-        "$":    (cursor) => { cursor.setX(cursor.getCurrentLine().textContent.length) },
-        //TODO: fix n
-        "w":    (cursor, n) => { cursor.moveForwardToRegex(/(?<=\s|\b|^)\S/) },
+        "h":        (cursor, n) => { cursor.setX(cursor.x - (n ?? 1)) },
+        "j":        (cursor, n) => { cursor.setY(cursor.y + (n ?? 1)) },
+        "k":        (cursor, n) => { cursor.setY(cursor.y - (n ?? 1)) },
+        "l":        (cursor, n) => { cursor.setX(cursor.x + (n ?? 1)) },
+        "gg":       (cursor, n) => { cursor.setY((n ?? 1) - 1) },
+        "G":        (cursor, n) => { cursor.setY((n ?? cursor.buffer.getLines().length) - 1) },
+        "0":        (cursor) => { cursor.setX(0) },
+        "$":        (cursor) => { cursor.setX(cursor.getCurrentLine().textContent.length) },
+        //TODO:     fix n
+        "w":        (cursor, n) => { cursor.moveForwardToRegex(/(?<=\s|\b|^)\S/) },
+        "b":        (cursor, n) => { /* TODO: */ },
+
+        "zz":       (cursor, n) => { /* TODO: */ }, // center cursor on screen
+        "zt":       (cursor, n) => { /* TODO: */ }, // position cursor on top of the screen
+        "zb":       (cursor, n) => { /* TODO: */ }, // position cursor on bottom of the screen
+        "<A-f>":    (cursor, n) => { /* TODO: */ }, // move screen down one page (cursor to first line)
+        "<A-b>":    (cursor, n) => { /* TODO: */ }, // move screen up one page (cursor to last line)
+        "<A-d>":    (cursor, n) => { /* TODO: */ }, // move cursor and screen down 1/2 page
+        "<A-u>":    (cursor, n) => { /* TODO: */ }, // move cursor and screen up 1/2 page
     },
     INSERT: {},
     BUFFER_MANIPULATION: {
-        "<A-w>s":    (buffer) => { openBuffer(buffer.interpreter, buffer.getPath()) }, //split window
-        "<A-w>v":    (buffer) => {}, //split window vertically
-        "<A-w>w":    (buffer) => {}, //switch windows
-        "<A-w>q":    (buffer) => { buffer.quit() }, //quit a window
-        "<A-w>h":    (buffer) => { buffer.moveActive("h") }, //move cursor to left window
-        "<A-w>l":    (buffer) => { buffer.moveActive("l") }, //move cursor to right window
-        "<A-w>j":    (buffer) => { buffer.moveActive("j") }, //move cursor to window below
-        "<A-w>k":    (buffer) => { buffer.moveActive("k") }, //move cursor to window above
+        "<A-w>s":   (buffer) => { openBuffer(buffer.interpreter, buffer.getPath()) }, //split window
+        "<A-w>v":   (buffer) => { buffer.interpreter.commandLine.logNYI() }, //split window vertically
+        "<A-w>w":   (buffer) => { buffer.interpreter.commandLine.logNYI() }, //switch windows
+        "<A-w>q":   (buffer) => { buffer.quit() }, //quit a window
+        "<A-w>h":   (buffer) => { buffer.moveActive("h") }, //move cursor to left window
+        "<A-w>l":   (buffer) => { buffer.moveActive("l") }, //move cursor to right window
+        "<A-w>j":   (buffer) => { buffer.moveActive("j") }, //move cursor to window below
+        "<A-w>k":   (buffer) => { buffer.moveActive("k") }, //move cursor to window above
     },
     NOTRW: {
         "o":        (buffer, selectedPath) => { openBuffer(buffer.interpreter, selectedPath) }, //open in new buffer
         "Enter":    (buffer, selectedPath) => { replaceBuffer(buffer, selectedPath) }, //open in current buffer
-        "-":        (buffer) => { replaceBuffer(buffer, buffer.getPath().replace(/\/.*\/$/, "/")) }, //go up dir
+        "-":        (buffer) => { replaceBuffer(buffer, buffer.getPath().replace(/\/[^\/]+\/$/, "/")) }, //go up dir
         "D":        (buffer) => { buffer.interpreter.commandLine.log("Permission denied") },
         "R":        (buffer) => { buffer.interpreter.commandLine.log("Permission denied") },
         "s":        (buffer) => { buffer.interpreter.commandLine.logNYI() },
         "x":        (buffer, selectedPath) => { BufferTypes[fileExtensionFromPath(selectedPath)]?.special(buffer, selectedPath) },
-        "F1":       () => { modal.showHelp() },
+    },
+    COMMAND: {
+        ":q":       (interpreter) => { interpreter.getActiveBuffer().quit() },
+        ":q!":      (interpreter) => { interpreter.getActiveBuffer().quit() },
+        ":Explore": (interpreter) => { const b = interpreter.getActiveBuffer(); replaceBuffer(b, b.getPath().replace(/\/[^\/]*$/, "/")) },
     }
 };
 
@@ -405,8 +514,6 @@ class Interpreter {
         this.mode = Modes.NORMAL;
         this.mult = "";
         this.partialCommand = "";
-        this.commandLine.command = "";
-        this.commandLine.logText = "";
         this.commandLine.setInactive();
     }
 
@@ -418,6 +525,7 @@ class Interpreter {
         }
 
         if(key === ":") {
+            this.commandLine.clear();
             this.commandLine.setActive();
             this.commandLine.input(key);
             this.mode = Modes.COMMAND;
@@ -466,6 +574,7 @@ class Interpreter {
         if(this.partialCommand === "" && keyDownEvent.altKey) key = `<A-${key}>`;
 
         if(key === "Escape") {
+            if(this.mode === Modes.COMMAND) this.commandLine.clear();
             this.toNormalMode();
         } else {
             switch(this.mode) {
@@ -508,6 +617,8 @@ const modal = new class {
     }
 
     showHelp() {
+        if(this.isOpen()) return;
+
         fetch("/f/help.md").then(res => res.text()).then(f => { 
             this.e.querySelector(`.modal-content`).innerHTML = marked.parse(f);
         }).then(this.open());
@@ -538,17 +649,20 @@ async function main() {
     interpreter.getActiveBuffer().cursor.render();
 
     window.addEventListener("keydown", function(e) {
+        if(e.key === "F1") {
+            e.preventDefault();
+            modal.showHelp();
+            return;
+        }
+
         if(modal.isOpen()) {
             if(e.key === "Escape") modal.close();
             return;
         }
 
-        if(preventDefaultKeys.includes(e.key)) e.preventDefault();
-
         interpreter.interpret(e); 
         interpreter.render();
     });
-    //todo move cursor when scrolling
 }
 
 document.addEventListener("DOMContentLoaded", main);

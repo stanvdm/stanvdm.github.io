@@ -1,5 +1,5 @@
 # Help page - Portfolio Stan Vandamme
-As a portfolio website I recreated the VIM text editor. All navigation is done with the keyboard (I added some mouse functionality for non vim users).
+As a portfolio website I recreated the VIM text editor from scratch using only vanilla JS, html and css. All navigation is done with the keyboard (I added some mouse functionality for non vim users).
 
 All articles are written in markdown and stored on git in the `/f/` directory. This directory is automatically indexed and presented in the form of a file explorer (netrw clone). Press `x` on any `.md` file to show it in a readable format. Press enter on a directory or file to open it (in raw text format).
 
