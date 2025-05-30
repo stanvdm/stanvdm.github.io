@@ -67,8 +67,24 @@ function updateScrollEventListeners(interpreter) {
     });
 }
 
+/**
+ * @param {Interpreter} interpreter
+ */
+function updateNotrwClickEventListeners(interpreter) {
+    document.querySelectorAll(`section[data-type=notrw] p[data-path]`).forEach(p => {
+        p.addEventListener("click", e => {
+            const buffer = interpreter.getAllVisibleBuffers().find(b => b.e.contains(e.currentTarget))
+            replaceBuffer(buffer, e.currentTarget.dataset.path);
+        });
+    });
+}
+
 function fileExtensionFromPath(path) {
     return /(?<=\.)[a-zA-Z0-9]+$/.exec(path)?.at(0) || "";
+}
+
+function getFileDir(filePath) {
+    return filePath.replace(/\/[^\/]*$/, "/");
 }
 
 /**
@@ -133,6 +149,7 @@ async function replaceBuffer(oldBuffer, path, classList, parser=undefined) {
     newBuffer.cursor.render();
 
     updateScrollEventListeners(oldBuffer.interpreter);
+    updateNotrwClickEventListeners(oldBuffer.interpreter);
 }
 
 /**
@@ -150,6 +167,7 @@ async function openBuffer(interpreter, path, classList, parser=undefined) {
     interpreter.render();
 
     updateScrollEventListeners(interpreter);
+    updateNotrwClickEventListeners(interpreter);
 }
 
 function updateCommandLine(partialCommand) {
@@ -322,7 +340,7 @@ class Buffer {
         this.e.remove();
         const activeBuffers = this.interpreter.getAllVisibleBuffers();
         if(activeBuffers.length <= 0)
-            openBuffer(this.interpreter);
+            openBuffer(this.interpreter, getFileDir(this.getPath()));
         else
             activeBuffers[activeBuffers.length - 1].makeActive();
     }
@@ -489,7 +507,7 @@ const Motions = {
     COMMAND: {
         ":q":       (interpreter) => { interpreter.getActiveBuffer().quit() },
         ":q!":      (interpreter) => { interpreter.getActiveBuffer().quit() },
-        ":Explore": (interpreter) => { const b = interpreter.getActiveBuffer(); replaceBuffer(b, b.getPath().replace(/\/[^\/]*$/, "/")) },
+        ":Explore": (interpreter) => { const b = interpreter.getActiveBuffer(); replaceBuffer(b, getFileDir(b.getPath())) },
     }
 };
 

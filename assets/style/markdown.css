@@ -14,7 +14,6 @@ section.markdown > article, div.markdown {
 	padding: 0;
 	height: auto;
 	width: auto;
-	line-height: 1;
 	white-space: normal;
 	/*position: relative;*/
     }
@@ -168,7 +167,11 @@ section.markdown > article, div.markdown {
 	margin: .5rem 0;
 	list-style: disc;
 	list-style-position: inside;
-	margin-left: 2rem;
+	padding-left: 4rem;
+	text-indent: -2rem;
+	ul, ol {
+	    padding-left: 2rem;
+	}
     }
 
     ol {
