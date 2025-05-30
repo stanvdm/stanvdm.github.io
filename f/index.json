@@ -1,22 +1,57 @@
 [
   {
+    "file": "/f/about-me.md",
+    "size": 11,
+    "birth": "2025-05-29 16:58:50",
+    "modify": "2025-05-29 16:58:50"
+  }
+,
+  {
+    "file": "/f/blog-posts/best-hacker-in-belgium.md",
+    "size": 1335,
+    "birth": "2025-05-29 16:58:50",
+    "modify": "2025-05-29 16:58:50"
+  }
+,
+  {
+    "file": "/f/blog-posts/hack-the-future-2024.md",
+    "size": 23,
+    "birth": "2025-05-29 16:58:50",
+    "modify": "2025-05-29 16:58:50"
+  }
+,
+  {
+    "file": "/f/blog-posts/pygame-basics-at-high-school.md",
+    "size": 3070,
+    "birth": "2025-05-29 16:58:50",
+    "modify": "2025-05-29 16:58:50"
+  }
+,
+  {
+    "file": "/f/blog-posts/starfisk-whats-new-in-dot-net.md",
+    "size": 1174,
+    "birth": "2025-05-29 16:58:50",
+    "modify": "2025-05-29 16:58:50"
+  }
+,
+  {
     "file": "/f/help.md",
-    "size": 442,
-    "birth": "2025-05-27 12:55:16",
-    "modify": "2025-05-27 12:55:16"
+    "size": 1135,
+    "birth": "2025-05-29 16:58:50",
+    "modify": "2025-05-29 16:58:50"
   }
 ,
   {
     "file": "/f/lorem-ipsum-markdown-example.md",
     "size": 2843,
-    "birth": "2025-05-27 12:55:16",
-    "modify": "2025-05-27 12:55:16"
+    "birth": "2025-05-29 16:58:50",
+    "modify": "2025-05-29 16:58:50"
   }
 ,
   {
-    "file": "/f/test.md",
-    "size": 56,
-    "birth": "2025-05-27 12:55:16",
-    "modify": "2025-05-27 12:55:16"
+    "file": "/f/the-making-of.md",
+    "size": 0,
+    "birth": "2025-05-29 16:58:50",
+    "modify": "2025-05-29 16:58:50"
   }
 ]
