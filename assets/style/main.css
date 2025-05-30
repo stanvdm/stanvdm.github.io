@@ -1,8 +1,12 @@
 :root {
-    --gap: 1rem;
+    /* set default font-size to the browser's */
+    font-size: 1rem;
+    --line-height: 1.25rem;
+
+    --gap: var(--line-height);
     --color-background: #0c0c0c;
     --color-text: white;
-    --scroll-margin: 3rem;
+    --scroll-margin: calc(3 * var(--line-height));
     --color-highlight: gray;
 
     /* color scheme */
@@ -17,10 +21,6 @@
     --color-primary-bright: #d07c83;
     --color-primary-normal: #ac555c;
     --color-primary-dim:    #892c33;
-
-    /* set default font-size to the browser's */
-    font-size: 1rem;
-    --line-height: 1.25rem;
 }
 
 body {
