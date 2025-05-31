@@ -5,12 +5,18 @@ async function fetchFileIndex(callback) {
 /**
  * @param {HTMLElement} e
  * @param {HTMLElement} scrollContainer
- * @returns {}
+ * @param {Boolean} includeMargins if true, will count element's scrollmargin in calculations
  */
-function elementNotVisibleInScroll(e, scrollContainer) {
+function elementNotVisibleInScroll(e, scrollContainer, includeMargins=true) {
     const styles = getComputedStyle(e);
-    const topBound = scrollContainer.scrollTop + (Number(styles.scrollMarginTop.slice(0, -2)) || 0)
-    const bottomBound = scrollContainer.scrollTop + scrollContainer.clientHeight - (Number(styles.scrollMarginBottom.slice(0, -2)) || 0)
+    const scrollMarginTop = Number(styles.scrollMarginTop.slice(0, -2)) || 0;
+    const scrollMarginBottom = Number(styles.scrollMarginBottom.slice(0, -2)) || 0;
+
+    const computedScrollMarginTop = (includeMargins && e.offsetTop > scrollMarginTop) ? scrollMarginTop : 0;
+    const computedScrollMarginBottom = (includeMargins && e.offsetTop + e.clientHeight + scrollMarginBottom  < scrollContainer.scrollHeight) ? scrollMarginBottom : 0;
+
+    const topBound = scrollContainer.scrollTop + computedScrollMarginTop;
+    const bottomBound = scrollContainer.scrollTop + scrollContainer.clientHeight - computedScrollMarginBottom;
 
     if(e.offsetTop < topBound) return "top";
     if(e.offsetTop + e.clientHeight > bottomBound) return "bottom";
@@ -31,15 +37,16 @@ function scrollIntoViewIfNotVisible(e, scrollContainer) {
 /**
  * @param {HTMLElement} scrollContainer
  * @param {boolean} [first=true] return first if true else return last
+ * @param {Boolean} includeMargins if true, will count element's scrollmargin in calculations
  */
-function getFirstLastVisibleElement(scrollContainer, first=true) {
+function getFirstLastVisibleElement(scrollContainer, first=true, inludeMargins=true) {
     const elements = scrollContainer.children;
     let last = null;
 
     for(let i = 0; i < elements.length; i++) {
         const e = elements[i];
 
-        if(elementNotVisibleInScroll(e, scrollContainer) === false) {
+        if(elementNotVisibleInScroll(e, scrollContainer, inludeMargins) === false) {
             if(first) return {e, i};
             last = i;
         }
@@ -53,7 +60,7 @@ function getFirstLastVisibleElement(scrollContainer, first=true) {
  */
 function updateScrollEventListeners(interpreter) {
     interpreter.getAllVisibleBuffers().forEach(b => {
-        b.e.querySelector(`article`).addEventListener("scroll", (ev) => { 
+        b.getScrollContainer().addEventListener("scroll", (ev) => { 
             const scrollContainer = ev.currentTarget;
             const e  = scrollContainer.querySelector(`:scope > *:has(.cursor)`);
             const eNotVisible = elementNotVisibleInScroll(e, scrollContainer);
@@ -73,8 +80,15 @@ function updateScrollEventListeners(interpreter) {
 function updateNotrwClickEventListeners(interpreter) {
     document.querySelectorAll(`section[data-type=notrw] p[data-path]`).forEach(p => {
         p.addEventListener("click", e => {
+            const selectedPath = e.currentTarget.dataset.path;
             const buffer = interpreter.getAllVisibleBuffers().find(b => b.e.contains(e.currentTarget))
-            replaceBuffer(buffer, e.currentTarget.dataset.path);
+            const extension = fileExtensionFromPath(selectedPath);
+
+            if(extension in BufferTypes) {
+                BufferTypes[extension]?.special(buffer, selectedPath);
+            } else {
+                replaceBuffer(buffer, selectedPath);
+            }
         });
     });
 }
@@ -226,6 +240,36 @@ class Cursor {
         if(currentCursor) currentCursor.replaceWith(...currentCursor.childNodes);
     }
 
+    moveYPxDown(px) {
+        let line = this.getCurrentLine();
+        const startingYPx = line.offsetTop+ this.getCurrentCursor().getBoundingClientRect().bottom - line.getBoundingClientRect().top;
+        const target = startingYPx + px;
+
+        while(line.nextElementSibling) {
+            if(line.offsetTop + line.clientHeight > target) {
+                break;
+            }
+            this.y++;
+            line = line.nextElementSibling;
+        }
+        this.render();
+    }
+
+    moveYPxUp(px) {
+        let line = this.getCurrentLine();
+        const startingYPx = line.offsetTop+ this.getCurrentCursor().getBoundingClientRect().bottom - line.getBoundingClientRect().top;
+        const target = startingYPx - px;
+
+        while(line.previousElementSibling) {
+            if(line.offsetTop + line.clientHeight < target) {
+                break;
+            }
+            this.y--;
+            line = line.previousElementSibling;
+        }
+        this.render();
+    }
+
     moveForwardToRegex(regex) {
         const lines = this.buffer.getLines();
         let i = lines[this.y].textContent.search(RegExp(`(?<=.{${this.x + 1}})` + regex.source));
@@ -241,6 +285,26 @@ class Cursor {
         this.render();
     }
 
+    moveBackwardToRegex(regex) {
+        function searchBackward(string) {
+            const re = !regex.flags.includes("g") ? RegExp(re.source, re.flags + "g") : regex;
+            const matches = [...string.matchAll(re)];
+            return matches.length > 0 ? matches[matches.length - 1].index : -1;
+        }
+
+        const lines = this.buffer.getLines();
+        let i = searchBackward(lines[this.y].textContent.substring(0, this.x));
+
+        while(i < 0 && this.y > 0) {
+            this.y--; 
+            const text = lines[this.y].textContent;
+            i = searchBackward(text);
+            if(text.trim() === "") i = 0;
+        }
+        const lineLen = lines[this.y].textContent.length;
+        this.x = i < lineLen && i >= 0 ? i : lineLen - 1;
+        this.render();
+    }
 
     render() {
         this.derender();
@@ -273,7 +337,7 @@ class Cursor {
             }
         }
 
-        scrollIntoViewIfNotVisible(this.getCurrentLine(), this.buffer.e.querySelector(`article`));
+        scrollIntoViewIfNotVisible(this.getCurrentLine(), this.buffer.getScrollContainer());
     }
 }
 
@@ -290,6 +354,10 @@ class Buffer {
 
     getLines() {
         return this.e.querySelectorAll(`article > *`);
+    }
+
+    getScrollContainer() {
+        return this.e.querySelector(`article`);
     }
 
     getPath() {
@@ -354,7 +422,7 @@ class Buffer {
             const bufferTitle = this.e.dataset.path || "[No Name]";
 
             if(this.isActive()) {
-                const viewportPosition = calculateViewportPosition(this.e.querySelector(`article`));
+                const viewportPosition = calculateViewportPosition(this.getScrollContainer());
                 const mode = this.interpreter.mode;
                 this.e.querySelector(`aside`).innerHTML = `<span><span class="highlight"> ${mode} </span> ${bufferTitle} </span><span class="highlight"> ${this.cursor.y + 1}:${this.cursor.x + 1} ${viewportPosition} </span>`;
             } else {
@@ -462,51 +530,83 @@ const Modes = {
     REPLACE: "Replace"
 };
 
+function repeat(n, callback) {
+    n = n ?? 1;
+    for(let i = 0; i < n; i++) {
+        callback();
+    }
+}
+
+const scrollIntoCenterOptions = { behavior: "instant", block: "center", inline: "center" };
+
+/**
+ * @param {HTMLElement} e
+ * @param {HTMLElement} scrollContainer
+ */
+function centerElementInScroll(e, scrollContainer) {
+    scrollContainer.style.scrollSnapType = "y mandatory";
+    e.scrollIntoView(scrollIntoCenterOptions);
+    scrollContainer.style.scrollSnapType = "none";
+}
+
 const Motions = {
     MOVEMENT: {
-        "h":        (cursor, n) => { cursor.setX(cursor.x - (n ?? 1)) },
-        "j":        (cursor, n) => { cursor.setY(cursor.y + (n ?? 1)) },
-        "k":        (cursor, n) => { cursor.setY(cursor.y - (n ?? 1)) },
-        "l":        (cursor, n) => { cursor.setX(cursor.x + (n ?? 1)) },
-        "gg":       (cursor, n) => { cursor.setY((n ?? 1) - 1) },
-        "G":        (cursor, n) => { cursor.setY((n ?? cursor.buffer.getLines().length) - 1) },
-        "0":        (cursor) => { cursor.setX(0) },
-        "$":        (cursor) => { cursor.setX(cursor.getCurrentLine().textContent.length) },
-        //TODO:     fix n
-        "w":        (cursor, n) => { cursor.moveForwardToRegex(/(?<=\s|\b|^)\S/) },
-        "b":        (cursor, n) => { /* TODO: */ },
+        "h":        (cursor, n) => cursor.setX(cursor.x - (n ?? 1)),
+        "j":        (cursor, n) => cursor.setY(cursor.y + (n ?? 1)),
+        "k":        (cursor, n) => cursor.setY(cursor.y - (n ?? 1)),
+        "l":        (cursor, n) => cursor.setX(cursor.x + (n ?? 1)),
+        "gg":       (cursor, n) => cursor.setY((n ?? 1) - 1),
+        "G":        (cursor, n) => cursor.setY((n ?? cursor.buffer.getLines().length) - 1),
+        "0":        (cursor) => cursor.setX(0),
+        "$":        (cursor) => cursor.setX(cursor.getCurrentLine().textContent.length),
+        "w":        (cursor, n) => repeat(n, () => cursor.moveForwardToRegex(/(?<=\s|\b|^)\S/)),
+        "b":        (cursor, n) => repeat(n, () => cursor.moveBackwardToRegex(/(?<=\s|\b|^)\S/g)),
 
-        "zz":       (cursor, n) => { /* TODO: */ }, // center cursor on screen
-        "zt":       (cursor, n) => { /* TODO: */ }, // position cursor on top of the screen
-        "zb":       (cursor, n) => { /* TODO: */ }, // position cursor on bottom of the screen
-        "<A-f>":    (cursor, n) => { /* TODO: */ }, // move screen down one page (cursor to first line)
-        "<A-b>":    (cursor, n) => { /* TODO: */ }, // move screen up one page (cursor to last line)
-        "<A-d>":    (cursor, n) => { /* TODO: */ }, // move cursor and screen down 1/2 page
-        "<A-u>":    (cursor, n) => { /* TODO: */ }, // move cursor and screen up 1/2 page
+        "zz":       (cursor) => centerElementInScroll(cursor.getCurrentLine(), cursor.buffer.getScrollContainer()), // center cursor on screen
+        "zt":       (cursor) => cursor.getCurrentLine().scrollIntoView(), // position cursor on top of the screen
+        "zb":       (cursor) => cursor.getCurrentLine().scrollIntoView(false), // position cursor on bottom of the screen
+        "<A-e>":    (cursor, n) => {
+            const bottomLine = getFirstLastVisibleElement(cursor.buffer.getScrollContainer(), false).e;
+            bottomLine?.nextElementSibling?.scrollIntoView(false);
+        }, // move screen down one line (without moving cursor)
+        "<A-y>":    (cursor, n) => {
+            const topLine = getFirstLastVisibleElement(cursor.buffer.getScrollContainer()).e;
+            topLine?.previousElementSibling?.scrollIntoView();
+        }, // move screen up one line (without moving cursor)
+        "<A-f>":    (cursor, n) => { const sc = cursor.buffer.getScrollContainer(); sc.scrollBy(0, sc.clientHeight * (n ?? 1)) }, // move screen down one page (cursor to first line)
+        "<A-b>":    (cursor, n) => { const sc = cursor.buffer.getScrollContainer(); sc.scrollBy(0, -sc.clientHeight * (n ?? 1)) }, // move screen up one page (cursor to last line)
+        "<A-d>":    (cursor, n) => repeat(n ?? 1, () => {
+            cursor.moveYPxDown(cursor.buffer.getScrollContainer().clientHeight / 2);
+            centerElementInScroll(cursor.getCurrentLine(), cursor.buffer.getScrollContainer())
+        }), // move cursor and screen down 1/2 page
+        "<A-u>":    (cursor, n) => repeat(n ?? 1, () => {
+            cursor.moveYPxUp(cursor.buffer.getScrollContainer().clientHeight / 2);
+            centerElementInScroll(cursor.getCurrentLine(), cursor.buffer.getScrollContainer())
+        }), // move cursor and screen up 1/2 page
     },
     INSERT: {},
     BUFFER_MANIPULATION: {
-        "<A-w>s":   (buffer) => { openBuffer(buffer.interpreter, buffer.getPath()) }, //split window
-        "<A-w>v":   (buffer) => { buffer.interpreter.commandLine.logNYI() }, //split window vertically
-        "<A-w>w":   (buffer) => { buffer.interpreter.commandLine.logNYI() }, //switch windows
-        "<A-w>q":   (buffer) => { buffer.quit() }, //quit a window
-        "<A-w>h":   (buffer) => { buffer.moveActive("h") }, //move cursor to left window
-        "<A-w>l":   (buffer) => { buffer.moveActive("l") }, //move cursor to right window
-        "<A-w>j":   (buffer) => { buffer.moveActive("j") }, //move cursor to window below
-        "<A-w>k":   (buffer) => { buffer.moveActive("k") }, //move cursor to window above
+        "<A-w>s":   (buffer) => openBuffer(buffer.interpreter, buffer.getPath()), //split window
+        "<A-w>v":   (buffer) => buffer.interpreter.commandLine.logNYI(), //split window vertically
+        "<A-w>w":   (buffer) => buffer.interpreter.commandLine.logNYI(), //switch windows
+        "<A-w>q":   (buffer) => buffer.quit(), //quit a window
+        "<A-w>h":   (buffer) => buffer.moveActive("h"), //move cursor to left window
+        "<A-w>l":   (buffer) => buffer.moveActive("l"), //move cursor to right window
+        "<A-w>j":   (buffer) => buffer.moveActive("j"), //move cursor to window below
+        "<A-w>k":   (buffer) => buffer.moveActive("k"), //move cursor to window above
     },
     NOTRW: {
-        "o":        (buffer, selectedPath) => { openBuffer(buffer.interpreter, selectedPath) }, //open in new buffer
-        "Enter":    (buffer, selectedPath) => { replaceBuffer(buffer, selectedPath) }, //open in current buffer
-        "-":        (buffer) => { replaceBuffer(buffer, buffer.getPath().replace(/\/[^\/]+\/$/, "/")) }, //go up dir
-        "D":        (buffer) => { buffer.interpreter.commandLine.log("Permission denied") },
-        "R":        (buffer) => { buffer.interpreter.commandLine.log("Permission denied") },
-        "s":        (buffer) => { buffer.interpreter.commandLine.logNYI() },
-        "x":        (buffer, selectedPath) => { BufferTypes[fileExtensionFromPath(selectedPath)]?.special(buffer, selectedPath) },
+        "o":        (buffer, selectedPath) => openBuffer(buffer.interpreter, selectedPath), //open in new buffer
+        "Enter":    (buffer, selectedPath) => replaceBuffer(buffer, selectedPath), //open in current buffer
+        "-":        (buffer) => replaceBuffer(buffer, buffer.getPath().replace(/\/[^\/]+\/$/, "/")), //go up dir
+        "D":        (buffer) => buffer.interpreter.commandLine.log("Permission denied"),
+        "R":        (buffer) => buffer.interpreter.commandLine.log("Permission denied"),
+        "s":        (buffer) => buffer.interpreter.commandLine.logNYI(),
+        "x":        (buffer, selectedPath) => BufferTypes[fileExtensionFromPath(selectedPath)]?.special(buffer, selectedPath),
     },
     COMMAND: {
-        ":q":       (interpreter) => { interpreter.getActiveBuffer().quit() },
-        ":q!":      (interpreter) => { interpreter.getActiveBuffer().quit() },
+        ":q":       (interpreter) => interpreter.getActiveBuffer().quit(),
+        ":q!":      (interpreter) => interpreter.getActiveBuffer().quit(),
         ":Explore": (interpreter) => { const b = interpreter.getActiveBuffer(); replaceBuffer(b, getFileDir(b.getPath())) },
     }
 };
@@ -589,7 +689,10 @@ class Interpreter {
 
     interpret(keyDownEvent) {
         let key = keyDownEvent.key;
-        if(this.partialCommand === "" && keyDownEvent.altKey) key = `<A-${key}>`;
+        if(this.partialCommand === "" && keyDownEvent.altKey) {
+            keyDownEvent.preventDefault();
+            key = `<A-${key}>`;
+        }
 
         if(key === "Escape") {
             if(this.mode === Modes.COMMAND) this.commandLine.clear();

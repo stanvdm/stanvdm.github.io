@@ -66,12 +66,14 @@ section {
 
     article {
 	overflow: scroll;
+	/*scroll-snap-type: y proximity;*/
 	scrollbar-width: none;
 	height: calc(100% - var(--line-height));
 	/*width: 100%;*/
     }
 
     article > * {
+	scroll-snap-align: start;
 	display: block;
 	counter-increment: linenr;
 	margin-left: 2.5rem;
