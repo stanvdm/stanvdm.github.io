@@ -11,14 +11,14 @@ I was tasked with coding a simple game. I decided to prepare two games:
 ### 1. Brick Breaker
 Github link: [https://github.com/stanvdm/brick-breaker-st-rembert](https://github.com/stanvdm/brick-breaker-st-rembert)
 
-![Brick Breaker gif]()
+![Brick Breaker gif](/assets/images/pygame-basics-at-high-school/pong.gif)
 
 A simple 2D game where a ball bounces off the a player conrolled paddle and breaks bricks. The goal is to break all the bricks without letting the ball fall below the paddle.
 
 ### 2. Platformer
 Github link: [https://github.com/stanvdm/platformer-st-rembert](https://github.com/stanvdm/platformer-st-rembert)
 
-![Platformer gif]()
+![Platformer gif](/assets/images/pygame-basics-at-high-school/platformer.gif)
 
 A simple platformer where the player can move around in a 2D world. The idea was to create a foundation which the students can expand with their own ideas, assets, etc.
 
@@ -34,4 +34,4 @@ The live coding went pretty smoothly. Some bugs appeared, but I could resolve th
 We then answered some questions about courses, coding, Linux, etc. both from students and the teacher. The remaining time was spent answering these questions and helping some students to further develop their game.
 
 ## Conclusion
-TODO
+I definetly learned a lot from this experience. 
