@@ -33,5 +33,7 @@ The live coding went pretty smoothly. Some bugs appeared, but I could resolve th
 
 We then answered some questions about courses, coding, Linux, etc. both from students and the teacher. The remaining time was spent answering these questions and helping some students to further develop their game.
 
+As with all classes, some students were interested and followed allong, some were not and did other things. It was clear that there was a large gap between students in terms of programming experience and skill. We saw some students multitasking, doing something else, but still coding along perfectly. Others were fully focused on following along and still weren't fast enough, or couldn't understand what was going on.
+
 ## Conclusion
-I definetly learned a lot from this experience. 
+I definetly learned a lot from this experience. I got to feel what it was like being a teacher... and did not like how it felt. I dislike speaking to an audience and this was no exception. Though I must say that it went better than expected. I explainded everything relatively well, didn't stutter all too much and some of the students seemed genuenly interested.
