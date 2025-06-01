@@ -1,8 +1,8 @@
 # PyGame and Python Basics
-As a pr event, fellow student [Bram Lahousse](https://lahoussebram.github.io/) and I decided to give a lecture about the basics of PyGame and Python at the high school we went to, [Sint-Jozefscollege Torhout](https://www.sintjozefscollegetorhout.be/). We met our old math and Windows Server teachers, and were allowed to teach the final year studens in the same course we attended. This used to be called Informatica Beheer.
+As a pr event, fellow student [Bram Lahousse](https://lahoussebram.github.io/) and I decided to give a lecture about the basics of PyGame and Python at the high school we went to, [Sint-Jozefscollege Torhout](https://www.sintjozefscollegetorhout.be/). We met our old math and Windows Server teachers, and were allowed to teach the final year students in the same course we attended. This used to be called Informatica Beheer.
 
 ## Idea and preparations
-To find an idea for the subject of the lecture, Bram and I looked back to what subjects and lectures we did and didn't enjoy back in high school. We wanted a very practical lecture where the students could code along and we wanted a subject that would be enticing to a large portion of the audience. So we decided to code a simple game, step by step, allowing the students to code along.
+To find an idea for the subject of the lecture, Bram and I looked back to what subjects and lectures we did and didn't enjoy back in high school. We wanted a very practical lecture where the students could code along, and we wanted a subject that would be enticing to a large portion of the audience. So, we decided to code a simple game, step by step, allowing the students to code along.
 
 The high school teacher told us we had to assume the students didn't know any Python. So the first part of the lecture had to be a Python basics course. Bram handled this part.
 
@@ -33,7 +33,7 @@ The live coding went pretty smoothly. Some bugs appeared, but I could resolve th
 
 We then answered some questions about courses, coding, Linux, etc. both from students and the teacher. The remaining time was spent answering these questions and helping some students to further develop their game.
 
-As with all classes, some students were interested and followed allong, some were not and did other things. It was clear that there was a large gap between students in terms of programming experience and skill. We saw some students multitasking, doing something else, but still coding along perfectly. Others were fully focused on following along and still weren't fast enough, or couldn't understand what was going on.
+As with all classes, some students were interested and followed along, some were not and did other things. It was clear that there was a large gap between students in terms of programming experience and skill. We saw some students multitasking, doing something else, but still coding along perfectly. Others were fully focused on following along and still weren't fast enough or couldn't understand what was going on.
 
 ## Conclusion
-I definetly learned a lot from this experience. I got to feel what it was like being a teacher... and did not like how it felt. I dislike speaking to an audience and this was no exception. Though I must say that it went better than expected. I explainded everything relatively well, didn't stutter all too much and some of the students seemed genuenly interested.
+I definitely learned a lot from this experience. I got to feel what it was like being a teacher... and did not like how it felt. I dislike speaking to an audience and this was no exception. Though I must say that it went better than expected. I explained everything relatively well, didn't stutter all too much and some of the students seemed genuinely interested.
