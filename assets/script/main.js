@@ -2,6 +2,11 @@ async function fetchFileIndex(callback) {
     return fetch("/f/index.json").then(res => res.json()).then(json => callback(json));
 }
 
+function parseMarkdown(markdown) {
+    const html = marked.parse(markdown);
+    return html.replace(/<a href=/g, '<a target="_blank" rel="noopener noreferrer" href=');
+}
+
 /**
  * @param {HTMLElement} e
  * @param {HTMLElement} scrollContainer
@@ -517,7 +522,7 @@ const BufferTypes = {
     },
     "md": {
         name: "Markdown",
-        special: (buffer, selectedPath) => { replaceBuffer(buffer, selectedPath, ["markdown"], (f) => marked.parse(f)) },
+        special: (buffer, selectedPath) => { replaceBuffer(buffer, selectedPath, ["markdown"], (f) => parseMarkdown(f)) },
     },
 }
 
@@ -764,7 +769,7 @@ const modal = new class {
         if(this.isOpen()) return;
 
         fetch("/f/help.md").then(res => res.text()).then(f => { 
-            this.e.querySelector(`.modal-content`).innerHTML = marked.parse(f);
+            this.e.querySelector(`.modal-content`).innerHTML = parseMarkdown(f);
         }).then(this.open());
     }
 

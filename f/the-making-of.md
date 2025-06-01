@@ -25,6 +25,7 @@ The code for this project can be found on my [GitHub](https://github.com/stanvdm
 
 ## Future development
 This was a very fun project, so I might continue working on it. I have a few things that I want to get working, the biggest are:
+- Show the date a file was created/last edited
 - Other commands/motions (see [vim cheat sheet](https://vim.rtorr.com/))
 - Vertical splitting of windows
 - Other modes (i.e. insert, visual, replace)
