@@ -65,7 +65,7 @@ section {
     counter-reset: linenr;
 
     article {
-	overflow: scroll;
+	overflow-y: auto;
 	/*scroll-snap-type: y proximity;*/
 	scrollbar-width: none;
 	height: calc(100% - var(--line-height));
@@ -153,7 +153,9 @@ footer > span:nth-child(2) {
     bottom: 0;
     margin: auto;
     border: 1px solid var(--color-fg-dim);
-    padding: 0 .5rem;
+    padding: 0 calc(var(--line-height) / 2);
+    padding-top: calc(var(--line-height) * 1.5);
+    padding-bottom: var(--line-height);
 
     .close-btn {
 	position: absolute;
@@ -167,6 +169,11 @@ footer > span:nth-child(2) {
     .close-btn:hover {
 	background-color: var(--color-fg-normal);
 	color: var(--color-bg-normal);
+    }
+
+    .modal-content {
+	overflow-y: scroll;
+	height: 100%;
     }
 }
 

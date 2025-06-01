@@ -9,6 +9,9 @@
 }
 
 section.markdown > article, div.markdown {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-bg-bright) var(--color-bg-normal);
+
     * {
 	margin: 0;
 	padding: 0;
@@ -55,12 +58,13 @@ section.markdown > article, div.markdown {
 	margin-bottom: .5rem;
 	line-height: 1.25;
 	overflow: visible;
-	/*overflow-x: auto;*/
-	/*scrollbar-width: thin;*/
+	overflow-x: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--color-bg-bright) var(--color-bg-normal);
     }
 
     :not(pre) code {
-	padding: .1rem;
+	padding: 0 .2rem;
 	color: var(--color-primary-bright);
     }
 
@@ -143,7 +147,6 @@ section.markdown > article, div.markdown {
 
     body {
 	color: var(--color-fg-normal);
-	font-family: "Courier New";
 	line-height: 1.45;
 	margin: 6rem auto 1rem;
 	max-width: 48rem;

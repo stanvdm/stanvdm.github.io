@@ -125,7 +125,7 @@ async function generateBuffer(path="/", classList=[], parser=f => f.split("\n").
                 <p>" Sorted by name</p>
                 <p>" Quick Help: <span class="highlight">&lt;F1&gt;</span>:help  -:go up dir  D:delete  R:rename  s:sort-by  x:special</p>
                 <p>" ==============================================================================</p>
-                <p data-path="${path.replace(/\/.*\/$/, "/")}"><span class="cursor" data-x="0" data-y="6">.</span>./</p>
+                <p data-path="${path.replace(/\/[^\/]+\/$/, "/")}"><span class="cursor" data-x="0" data-y="6">.</span>./</p>
                 <p data-path="${path}">./</p>
                 ${Object.entries(files).map(([k, v]) => `<p data-path="${path}${k}">${k}</p>`).join("")}`;
         });
@@ -444,6 +444,7 @@ class CommandLine {
     }
 
     log(text) {
+        this.clear();
         this.logText = text;
     }
 
@@ -588,7 +589,17 @@ const Motions = {
     BUFFER_MANIPULATION: {
         "<A-w>s":   (buffer) => openBuffer(buffer.interpreter, buffer.getPath()), //split window
         "<A-w>v":   (buffer) => buffer.interpreter.commandLine.logNYI(), //split window vertically
-        "<A-w>w":   (buffer) => buffer.interpreter.commandLine.logNYI(), //switch windows
+        "<A-w>w":   (buffer) => {
+            const ab = buffer.interpreter.getAllVisibleBuffers();
+            ab.every((b, i) => {
+                if(b.isActive()) {
+                    const index = i + 1 < ab.length ? i + 1 : 0;
+                    ab[index].makeActive();
+                    return false;
+                }
+                return true;
+            })
+        }, //switch windows
         "<A-w>q":   (buffer) => buffer.quit(), //quit a window
         "<A-w>h":   (buffer) => buffer.moveActive("h"), //move cursor to left window
         "<A-w>l":   (buffer) => buffer.moveActive("l"), //move cursor to right window
@@ -608,6 +619,16 @@ const Motions = {
         ":q":       (interpreter) => interpreter.getActiveBuffer().quit(),
         ":q!":      (interpreter) => interpreter.getActiveBuffer().quit(),
         ":Explore": (interpreter) => { const b = interpreter.getActiveBuffer(); replaceBuffer(b, getFileDir(b.getPath())) },
+        ":Preview": (interpreter) => {
+            const ab = interpreter.getActiveBuffer();
+            if(ab.getBufferType().name === BufferTypes.md.name) {
+                ab.e.classList.contains("markdown")
+                    ? replaceBuffer(ab, ab.getPath())
+                    : BufferTypes.md.special(ab, ab.getPath());
+            } else {
+                interpreter.commandLine.log("Active buffer is not a markdown file");
+            }
+        },
     }
 };
 
@@ -650,6 +671,8 @@ class Interpreter {
             return;
         }
 
+        if(this.interpretBufferManipulation(key)) return;
+
         if(key in Motions.NOTRW && this.getActiveBuffer().getBufferType()?.name === "notrw") {
             const buffer = this.getActiveBuffer();
             const selectedPath = buffer.cursor.getCurrentLine()?.dataset?.path;
@@ -679,11 +702,12 @@ class Interpreter {
             Motions.BUFFER_MANIPULATION[cmd](this.getActiveBuffer());
             this.mult = "";
             this.partialCommand = "";
-            return;
+            return true;
         }
 
         if(Object.keys(Motions.BUFFER_MANIPULATION).some(k => k.startsWith(`${this.partialCommand}${key}`))) {
             this.partialCommand += key;
+            return true;
         }
     }
 
@@ -701,7 +725,6 @@ class Interpreter {
             switch(this.mode) {
                 case Modes.NORMAL:
                     this.interpretNormal(key);
-                    this.interpretBufferManipulation(key);
                     break;
                 case Modes.COMMAND:
                     this.commandLine.input(key);
