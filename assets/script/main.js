@@ -251,11 +251,11 @@ class Cursor {
         const target = startingYPx + px;
 
         while(line.nextElementSibling) {
+            this.y++;
+            line = line.nextElementSibling;
             if(line.offsetTop + line.clientHeight > target) {
                 break;
             }
-            this.y++;
-            line = line.nextElementSibling;
         }
         this.render();
     }
@@ -266,11 +266,11 @@ class Cursor {
         const target = startingYPx - px;
 
         while(line.previousElementSibling) {
+            this.y--;
+            line = line.previousElementSibling;
             if(line.offsetTop + line.clientHeight < target) {
                 break;
             }
-            this.y--;
-            line = line.previousElementSibling;
         }
         this.render();
     }
@@ -557,6 +557,12 @@ function centerElementInScroll(e, scrollContainer) {
 
 const Motions = {
     MOVEMENT: {
+        // for people that dont want to learn
+        "ArrowLeft":    (cursor, n) => cursor.setX(cursor.x - (n ?? 1)),
+        "ArrowDown":    (cursor, n) => cursor.setY(cursor.y + (n ?? 1)),
+        "ArrowUp":      (cursor, n) => cursor.setY(cursor.y - (n ?? 1)),
+        "ArrowRight":   (cursor, n) => cursor.setX(cursor.x + (n ?? 1)),
+
         "h":        (cursor, n) => cursor.setX(cursor.x - (n ?? 1)),
         "j":        (cursor, n) => cursor.setY(cursor.y + (n ?? 1)),
         "k":        (cursor, n) => cursor.setY(cursor.y - (n ?? 1)),
@@ -571,23 +577,29 @@ const Motions = {
         "zz":       (cursor) => centerElementInScroll(cursor.getCurrentLine(), cursor.buffer.getScrollContainer()), // center cursor on screen
         "zt":       (cursor) => cursor.getCurrentLine().scrollIntoView(), // position cursor on top of the screen
         "zb":       (cursor) => cursor.getCurrentLine().scrollIntoView(false), // position cursor on bottom of the screen
-        "<A-e>":    (cursor, n) => {
+        "<A-e>":    (cursor, n) => repeat(n ?? 1, () => {
             const bottomLine = getFirstLastVisibleElement(cursor.buffer.getScrollContainer(), false).e;
             bottomLine?.nextElementSibling?.scrollIntoView(false);
-        }, // move screen down one line (without moving cursor)
-        "<A-y>":    (cursor, n) => {
+        }), // move screen down one line (without moving cursor)
+        "<A-y>":    (cursor, n) => repeat(n ?? 1, () => {
             const topLine = getFirstLastVisibleElement(cursor.buffer.getScrollContainer()).e;
             topLine?.previousElementSibling?.scrollIntoView();
-        }, // move screen up one line (without moving cursor)
-        "<A-f>":    (cursor, n) => { const sc = cursor.buffer.getScrollContainer(); sc.scrollBy(0, sc.clientHeight * (n ?? 1)) }, // move screen down one page (cursor to first line)
-        "<A-b>":    (cursor, n) => { const sc = cursor.buffer.getScrollContainer(); sc.scrollBy(0, -sc.clientHeight * (n ?? 1)) }, // move screen up one page (cursor to last line)
+        }), // move screen up one line (without moving cursor)
+        "<A-f>":    (cursor, n) => repeat(n ?? 1, () => {
+            const sc = cursor.buffer.getScrollContainer();
+            sc.scrollBy(0, sc.clientHeight * (n ?? 1));
+        }), // move screen down one page (cursor to first line)
+        "<A-b>":    (cursor, n) => repeat(n ?? 1, () => {
+            const sc = cursor.buffer.getScrollContainer();
+            sc.scrollBy(0, -sc.clientHeight * (n ?? 1));
+        }), // move screen up one page (cursor to last line)
         "<A-d>":    (cursor, n) => repeat(n ?? 1, () => {
             cursor.moveYPxDown(cursor.buffer.getScrollContainer().clientHeight / 2);
-            centerElementInScroll(cursor.getCurrentLine(), cursor.buffer.getScrollContainer())
+            centerElementInScroll(cursor.getCurrentLine(), cursor.buffer.getScrollContainer());
         }), // move cursor and screen down 1/2 page
         "<A-u>":    (cursor, n) => repeat(n ?? 1, () => {
             cursor.moveYPxUp(cursor.buffer.getScrollContainer().clientHeight / 2);
-            centerElementInScroll(cursor.getCurrentLine(), cursor.buffer.getScrollContainer())
+            centerElementInScroll(cursor.getCurrentLine(), cursor.buffer.getScrollContainer());
         }), // move cursor and screen up 1/2 page
     },
     INSERT: {},
